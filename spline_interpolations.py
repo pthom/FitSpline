@@ -5,19 +5,26 @@ from typing import *
 
 Point2D = np.ndarray
 PointsArray = np.ndarray
-ImageRgb = np.ndarray
 
-def dist_point(p1: Point2D, p2: Point2D) -> float:
+"""
+Spline interpolations functions:
+
+Catmull rom is adapted straight from the wikipedia article : 
+https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
+"""
+
+def _dist_point(p1: Point2D, p2: Point2D) -> float:
     return np.linalg.norm(p2 - p1)
 
-def get_t(t: float, pt0: Point2D, pt1: Point2D, alpha: float) -> float:
+
+def _get_t(t: float, pt0: Point2D, pt1: Point2D, alpha: float) -> float:
     a = math.pow((pt1[0] - pt0[0]), 2.0) + math.pow((pt1[1] - pt0[1]), 2.0)
     b = math.pow(a, 0.5)
     c = math.pow(b, alpha)
     return c + t
 
 
-def interpolate_centripetal_catmull_rom_p1p2(
+def _interpolate_centripetal_catmull_rom_p1p2(
         p0: Point2D,
         p1: Point2D,
         p2: Point2D,
@@ -27,24 +34,24 @@ def interpolate_centripetal_catmull_rom_p1p2(
     # if p1 and p2 are the same, we cannot interpolate
     epsilon = 1E-8
 
-    if dist_point(p1, p2) < epsilon:
+    if _dist_point(p1, p2) < epsilon:
         new_points = np.zeros((1, 2))
         new_points[0] = p1
         return new_points
     # if p0 and p1 are too close, we separate them to avoid a div by zero
-    if dist_point(p0, p1) < epsilon:
+    if _dist_point(p0, p1) < epsilon:
         p1[0] += 1E-6
     # if p2 and p3 are too close, we separate them to avoid a div by zero
-    if dist_point(p2, p3) < epsilon:
+    if _dist_point(p2, p3) < epsilon:
         p3[0] += 1E-6
 
 
     new_points = np.zeros((nb_points, 2))
 
     t0 = 0.0
-    t1 = get_t(t0, p0, p1, alpha)
-    t2 = get_t(t1, p1, p2, alpha)
-    t3 = get_t(t2, p2, p3, alpha)
+    t1 = _get_t(t0, p0, p1, alpha)
+    t2 = _get_t(t1, p1, p2, alpha)
+    t3 = _get_t(t2, p2, p3, alpha)
 
     dt = (t2 - t1) / nb_points
 
@@ -84,7 +91,7 @@ def interpolate_centripetal_catmull_rom(
         p2 = control_points[i + 2]
         p3 = control_points[i + 3]
 
-        interpolated_segment = interpolate_centripetal_catmull_rom_p1p2(p0, p1, p2, p3, nb_points_per_segment, alpha)
+        interpolated_segment = _interpolate_centripetal_catmull_rom_p1p2(p0, p1, p2, p3, nb_points_per_segment, alpha)
         interpolated_segments.append(interpolated_segment)
         nb_points_total = nb_points_total + interpolated_segment.shape[0]
 
@@ -137,7 +144,7 @@ def interpolate_pascal_spline_circular_shape(
     perimeter = 0.
     for i in range(nb_control_points):
         i1 = (i + 1) if ((i + 1) < nb_control_points) else 0
-        perimeter += dist_point(control_points[i], control_points[i1])
+        perimeter += _dist_point(control_points[i], control_points[i1])
 
     current_interpolated = control_points
     nb_loops = int(math.log(float(nb_minimum_points) / float(nb_control_points)) / math.log(2.) + 0.5)
@@ -163,9 +170,9 @@ def interpolate_pascal_spline_circular_shape(
             p1 = old_interpolated[i1]
             p2 = old_interpolated[i2]
 
-            dist = dist_point(p0, p1)
-            dist_1 = dist_point(p0, p_1)
-            dist2 =  dist_point(p1, p2)
+            dist = _dist_point(p0, p1)
+            dist_1 = _dist_point(p0, p_1)
+            dist2 =  _dist_point(p1, p2)
 
             if dist > .0001:
                 if dist_1 > .0001:
@@ -208,26 +215,6 @@ def interpolate_pascal_spline_circular_shape(
 
 
 import time
-
-
-def test():
-    control_points = np.array(
-        [
-            [0., 0.],
-            [1., 0.],
-            [1., 1.],
-            [0., 1.],
-        ]
-    )
-    interpolated_catmull = interpolate_centripetal_catmull_rom_circular_shape(
-         control_points,
-         nb_minimum_points = 200,
-         alpha=0.5
-    )
-    #interpolated_pascal = interpolate_pascal_spline_circular_shape(
-    #    control_points,
-    #    nb_minimum_points=200,
-    #    alpha=0.5)
 
 
 def typical_shapes() -> Dict[str, PointsArray]:
@@ -306,49 +293,4 @@ def typical_shapes() -> Dict[str, PointsArray]:
     for shape_name, shape_control_points in r.items():
         r_interp[shape_name] = interpolate_pascal_spline_circular_shape(shape_control_points, 300, 0.4)
     return r_interp
-
-
-def my_timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-        print('%r  %2.2f ms' % \
-                  (method.__name__, (te - ts) * 1000))
-        return result
-    return timed
-
-
-def precompile():
-    print("precompiling...")
-    control_points = np.array(
-        [
-            [0., 0.],
-            [1., 0.],
-            [1., 1.],
-            [0., 1.]
-        ])
-    interpolate_pascal_spline_circular_shape(control_points, 200, 0.4)
-    interpolate_centripetal_catmull_rom_circular_shape(control_points, 200, 0.4)
-
-
-
-
-precompile()
-
-
-
-if __name__ == "__main__":
-    control_points = np.array(
-        [
-            [0., 0.],
-            [1., 0.],
-            [1., 1.],
-            [0., 1.]
-        ])
-
-    def foo():
-        interpolate_pascal_spline_circular_shape(control_points, 200, 0.4)
-    foo()
-    my_timeit(foo)()
 
