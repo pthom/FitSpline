@@ -1,0 +1,9 @@
+name: cling
+channels:
+  - QuantStack
+  - conda-forge
+dependencies:
+  - jupyter
+  - opencv
+  - numpy
+  
