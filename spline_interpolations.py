@@ -1,19 +1,15 @@
 import numpy as np
 import math
 import cv2
-from numba import jit, njit
 from typing import *
-# from base import *
 
 Point2D = np.ndarray
 PointsArray = np.ndarray
 ImageRgb = np.ndarray
 
-@njit
 def dist_point(p1: Point2D, p2: Point2D) -> float:
     return np.linalg.norm(p2 - p1)
 
-@njit
 def get_t(t: float, pt0: Point2D, pt1: Point2D, alpha: float) -> float:
     a = math.pow((pt1[0] - pt0[0]), 2.0) + math.pow((pt1[1] - pt0[1]), 2.0)
     b = math.pow(a, 0.5)
@@ -21,7 +17,6 @@ def get_t(t: float, pt0: Point2D, pt1: Point2D, alpha: float) -> float:
     return c + t
 
 
-@njit
 def interpolate_centripetal_catmull_rom_p1p2(
         p0: Point2D,
         p1: Point2D,
@@ -71,7 +66,6 @@ def interpolate_centripetal_catmull_rom_p1p2(
     return new_points
 
 
-@njit
 def interpolate_centripetal_catmull_rom(
         control_points: PointsArray,
         nb_minimum_points: int,
@@ -103,7 +97,6 @@ def interpolate_centripetal_catmull_rom(
     return interpolated_curve
 
 
-@njit
 def interpolate_centripetal_catmull_rom_circular_shape(
         control_points: PointsArray,
         nb_minimum_points: int,
@@ -127,7 +120,6 @@ def interpolate_centripetal_catmull_rom_circular_shape(
     return interpolate_centripetal_catmull_rom(control_points_circular, nb_minimum_points, alpha)
 
 
-@njit
 def interpolate_pascal_spline_circular_shape(
         control_points: PointsArray,
         nb_minimum_points: int,
